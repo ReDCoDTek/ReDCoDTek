@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* Direction : un relevé de compte qui dit enfin la vérité.
+   Deux couleurs porteuses de sens + neutres papier/encre. */
+@theme inline {
+  --color-papier: #f5f1e8;
+  --color-papier-fonce: #ebe5d6;
+  --color-encre: #16140f;
+  --color-encre-douce: #57524a;
+  --color-filet: #d6cfbf;
+  --color-perte: #b5381f; /* l'argent perdu */
+  --color-gain: #1e5a45; /* l'argent récupéré */
+
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-papier);
+  color: var(--color-encre);
+  font-family: var(--font-sans);
+}
+
+.chiffres {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-gain);
+  outline-offset: 2px;
+}
