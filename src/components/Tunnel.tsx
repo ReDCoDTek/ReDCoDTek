@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { enregistrerAudit } from "@/app/actions";
+import { EcranResultat } from "@/components/EcranResultat";
+import { argumentaire, NB_LIGNES_GRATUITES } from "@/lib/argumentaire";
 import {
   calculer,
   euros,
@@ -128,6 +132,9 @@ export function Tunnel() {
   const [etape, setEtape] = useState<Etape>(1);
   const [r, setR] = useState<Reponses>(REPONSES_PAR_DEFAUT);
   const haut = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const [enCours, demarrer] = useTransition();
+  const [horsLigne, setHorsLigne] = useState(false);
 
   // Reprend les réponses si la personne recharge la page (confort, pas indispensable).
   useEffect(() => {
@@ -163,7 +170,32 @@ export function Tunnel() {
     3: r.tarifActuel > 0 ? "" : "Indique ton tarif actuel pour voir ce que tu perds.",
   } as const;
 
-  if (etape === "resultat") return <EcranResultat calc={calc} onModifier={() => aller(1)} />;
+  // Secours : si l'enregistrement échoue, on montre quand même le résultat (jamais de cul-de-sac).
+  if (etape === "resultat") {
+    const arg = argumentaire(calc);
+    return (
+      <EcranResultat
+        calc={calc}
+        apercu={{ objet: arg.objet, premieresLignes: arg.email.slice(0, NB_LIGNES_GRATUITES) }}
+        avertissement={horsLigne ? "Ton calcul n’a pas pu être enregistré. Tu peux le consulter ici, mais garde cette page ouverte." : undefined}
+      />
+    );
+  }
+
+  const terminer = () =>
+    demarrer(async () => {
+      try {
+        const res = await enregistrerAudit(nettoyer(r));
+        if ("id" in res) {
+          router.push(`/resultat/${res.id}`);
+          return;
+        }
+        setHorsLigne(res.erreur !== "non-configure");
+      } catch {
+        setHorsLigne(true);
+      }
+      aller("resultat");
+    });
 
   return (
     <div ref={haut} className="mx-auto flex min-h-dvh max-w-xl flex-col px-4">
@@ -188,8 +220,9 @@ export function Tunnel() {
         className="flex flex-1 flex-col pt-6 pb-36"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!peutContinuer) return;
-          aller(etape === 3 ? "resultat" : ((etape + 1) as Etape));
+          if (!peutContinuer || enCours) return;
+          if (etape === 3) terminer();
+          else aller((etape + 1) as Etape);
         }}
       >
         {etape === 1 && (
@@ -298,9 +331,9 @@ export function Tunnel() {
         {/* Bouton principal, à portée de pouce */}
         <div className="fixed inset-x-0 bottom-0 border-t border-filet bg-papier/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
           <div className="mx-auto max-w-xl">
-            <button type="submit" disabled={!peutContinuer}
+            <button type="submit" disabled={!peutContinuer || enCours}
               className="min-h-14 w-full rounded-md bg-gain px-6 text-lg font-semibold text-papier disabled:bg-filet disabled:text-encre-douce">
-              {etape === 3 ? "Voir ce que je perds" : "Continuer"}
+              {etape === 3 ? (enCours ? "Calcul en cours…" : "Voir ce que je perds") : "Continuer"}
             </button>
             <p className="mt-1.5 min-h-4 text-center text-xs text-encre-douce" aria-live="polite">
               {message[etape] || "Tes réponses restent sur ton téléphone."}
@@ -312,99 +345,3 @@ export function Tunnel() {
   );
 }
 
-/* ---------- L'écran de résultat, avec SES chiffres ---------- */
-
-function Ligne({ libelle, valeur, fort }: { libelle: string; valeur: string; fort?: boolean }) {
-  return (
-    <div className={`flex justify-between gap-4 py-2.5 ${fort ? "text-lg font-semibold" : ""}`}>
-      <dt>{libelle}</dt>
-      <dd className="chiffres whitespace-nowrap">{valeur}</dd>
-    </div>
-  );
-}
-
-function EcranResultat({ calc, onModifier }: { calc: ReturnType<typeof calculer>; onModifier: () => void }) {
-  const r = calc.reponses;
-  const ecartMensuel = r.revenuMensuel - calc.revenuActuelMensuel;
-
-  return (
-    <main className="mx-auto max-w-xl px-4 pt-6 pb-16">
-      <div className="flex items-center justify-between text-sm">
-        <button type="button" onClick={onModifier} className="text-encre-douce underline underline-offset-4">
-          ← Modifier mes réponses
-        </button>
-        <span className="chiffres text-gain">Calcul terminé</span>
-      </div>
-
-      {calc.sousLePlancher ? (
-        <section className="mt-8">
-          <p className="text-encre-douce">
-            À <span className="chiffres">{r.tarifActuel}&nbsp;€</span> par jour, sur{" "}
-            <span className="chiffres">{calc.joursFactures}</span> jours facturés, tu perds chaque année :
-          </p>
-          <p className="chiffres mt-2 text-6xl leading-none text-perte">− {euros(calc.perteAnnuelle)}</p>
-          <p className="mt-5 font-serif text-2xl leading-snug">
-            Tu voulais te verser <span className="chiffres">{euros(r.revenuMensuel)}</span> par mois.
-            Avec ton tarif actuel, tu te verses en réalité{" "}
-            <span className="chiffres text-perte">{euros(Math.max(0, calc.revenuActuelMensuel))}</span>.
-          </p>
-          <p className="mt-3 text-encre-douce">
-            Il te manque <strong className="chiffres">{euros(ecartMensuel)}</strong> chaque mois. Ce n’est
-            pas un manque de travail : c’est un tarif calculé sans les charges, sans les frais et sur des
-            jours que personne ne te paie.
-          </p>
-        </section>
-      ) : (
-        <section className="mt-8">
-          <p className="text-encre-douce">Bonne nouvelle&nbsp;: ton tarif couvre ton objectif.</p>
-          <p className="mt-3 font-serif text-3xl leading-snug">
-            À <span className="chiffres">{r.tarifActuel}&nbsp;€</span> par jour, tu te verses environ{" "}
-            <span className="chiffres text-gain">{euros(calc.revenuActuelMensuel)}</span> par mois.
-          </p>
-          <p className="mt-3 text-encre-douce">
-            Mais tu n’as aucune marge : un impayé, un mois creux ou une semaine malade, et tu repasses
-            sous ton objectif.
-          </p>
-        </section>
-      )}
-
-      {/* Le calcul, posé devant lui */}
-      <section className="mt-10">
-        <h2 className="font-serif text-2xl">Ton calcul, ligne par ligne</h2>
-        <dl className="mt-3 divide-y divide-filet border-y border-filet text-[15px]">
-          <Ligne libelle="Ce que tu veux te verser" valeur={`${euros(calc.revenuAnnuel)} / an`} />
-          <Ligne libelle="+ Tes frais professionnels" valeur={`${euros(calc.fraisAnnuels)} / an`} />
-          <Ligne libelle={`+ Cotisations (≈ ${r.tauxCharges} %)`}
-            valeur={`${euros(calc.caNecessaire - calc.revenuAnnuel - calc.fraisAnnuels)} / an`} />
-          <Ligne libelle="= Chiffre d’affaires nécessaire" valeur={euros(calc.caNecessaire)} fort />
-          <Ligne libelle="÷ Jours vraiment facturés" valeur={`${calc.joursFactures} jours`} />
-        </dl>
-      </section>
-
-      {/* L'avant-goût gratuit : le tarif plancher, utilisable tout de suite */}
-      <section className="mt-8 rounded-md border-2 border-encre bg-white/60 p-5">
-        <p className="text-sm uppercase tracking-wide text-encre-douce">Ton tarif plancher</p>
-        <p className="chiffres mt-1 text-5xl">{euros(calc.tarifPlancher)}<span className="text-2xl"> / jour</span></p>
-        <p className="mt-3 text-[15px]">
-          En dessous de ce prix, chaque journée te coûte de l’argent. Ne descends plus jamais en
-          dessous, même pour « dépanner » un client.
-        </p>
-      </section>
-
-      {/* Ce que le produit changerait */}
-      <section className="mt-8">
-        <h2 className="font-serif text-2xl">Et avec une marge de sécurité&nbsp;?</h2>
-        <p className="mt-2 text-encre-douce">
-          Le plancher te fait juste atteindre ton objectif. Ton <strong>tarif conseillé</strong> y ajoute
-          une marge pour les impayés, les mois creux et les imprévus. Appliqué à tes{" "}
-          {calc.joursFactures} jours, il te rapporterait par rapport à aujourd’hui&nbsp;:
-        </p>
-        <p className="chiffres mt-3 text-4xl text-gain">+ {euros(calc.gainConseille)} <span className="text-xl">par an</span></p>
-        <div className="mt-6 rounded-md border border-dashed border-filet p-5 text-encre-douce">
-          <p className="font-medium text-encre">Bientôt ici&nbsp;: ton tarif conseillé et ton message prêt à envoyer</p>
-          <p className="mt-1 text-sm">Pour annoncer ta hausse à tes clients, sans te justifier pendant trois paragraphes.</p>
-        </div>
-      </section>
-    </main>
-  );
-}
