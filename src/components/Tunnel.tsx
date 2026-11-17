@@ -134,7 +134,7 @@ export function Tunnel() {
   const haut = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [enCours, demarrer] = useTransition();
-  const [horsLigne, setHorsLigne] = useState(false);
+  const [horsLigne, setHorsLigne] = useState<string | null>(null);
 
   // Reprend les réponses si la personne recharge la page (confort, pas indispensable).
   useEffect(() => {
@@ -177,7 +177,7 @@ export function Tunnel() {
       <EcranResultat
         calc={calc}
         apercu={{ objet: arg.objet, premieresLignes: arg.email.slice(0, NB_LIGNES_GRATUITES) }}
-        avertissement={horsLigne ? "Ton calcul n’a pas pu être enregistré. Tu peux le consulter ici, mais garde cette page ouverte." : undefined}
+        avertissement={horsLigne ? `Ton calcul n’a pas pu être enregistré (code : ${horsLigne}). Tu peux le consulter ici, mais garde cette page ouverte.` : undefined}
       />
     );
   }
@@ -190,9 +190,9 @@ export function Tunnel() {
           router.push(`/resultat/${res.id}`);
           return;
         }
-        setHorsLigne(res.erreur !== "non-configure");
+        setHorsLigne(res.erreur);
       } catch {
-        setHorsLigne(true);
+        setHorsLigne("reseau");
       }
       aller("resultat");
     });
