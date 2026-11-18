@@ -84,6 +84,9 @@ export async function creerSessionPaiement(
     return { clientSecret: session.client_secret };
   } catch (e) {
     console.error("Création de session Stripe impossible", e);
-    return { erreur: "Le paiement n’a pas pu s’ouvrir. Ta carte n’a pas été débitée : réessaie dans un instant." };
+    const base = "Le paiement n’a pas pu s’ouvrir. Ta carte n’a pas été débitée : réessaie dans un instant.";
+    // En mode test seulement : on affiche la raison exacte donnée par Stripe, pour diagnostiquer.
+    const modeTest = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_");
+    return { erreur: modeTest ? `${base} [Mode test — Stripe : ${(e as Error).message}]` : base };
   }
 }
