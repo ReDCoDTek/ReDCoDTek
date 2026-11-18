@@ -6,5 +6,7 @@ export const SITE = {
   promesse: "Ton tarif te fait perdre de l’argent. Calcule combien en 60 secondes.",
   description:
     "Revenu voulu, charges, jours vraiment facturables : découvre ton tarif plancher et ce que tu perds chaque année. Gratuit, sans inscription.",
+  /** Adresse de contact affichée (garantie, résiliation). À définir dans Vercel. */
+  contact: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? (urlVercel ? `https://${urlVercel}` : "http://localhost:3000"),
 };

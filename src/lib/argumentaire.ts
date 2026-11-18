@@ -24,12 +24,13 @@ export function planDeHausse(calc: Resultat, depuis = new Date()) {
   if (actuel >= cible) {
     return { paliers: [] as { date: string; tarif: number }[], cible, date1: dateFr(date1) };
   }
-  const ecart = (cible - actuel) / actuel;
+  // Premier palier : +15 % maximum pour ne brusquer personne, mais jamais sous le plancher.
+  const palier1 = Math.min(cible, Math.max(calc.tarifPlancher, arrondi10(actuel * 1.15)));
   const paliers =
-    ecart <= 0.15
+    palier1 >= cible
       ? [{ date: dateFr(date1), tarif: cible }]
       : [
-          { date: dateFr(date1), tarif: Math.min(cible, arrondi10(actuel * 1.15)) },
+          { date: dateFr(date1), tarif: palier1 },
           { date: dateFr(date2), tarif: cible },
         ];
   return { paliers, cible, date1: dateFr(date1) };

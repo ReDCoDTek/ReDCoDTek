@@ -50,16 +50,15 @@ export async function lireAudit(id: string) {
 
   const { data: acces } = await supabase
     .from("access")
-    .select("plan, status, current_period_end")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    .select("plan, status, audit_id")
+    .eq("user_id", user.id);
 
-  const actif =
-    !!acces &&
-    (acces.plan === "audit"
-      ? acces.status === "paid"
-      : ["active", "trialing"].includes(acces.status) &&
-        (!acces.current_period_end || new Date(acces.current_period_end) > new Date()));
+  // Audit : débloque CE calcul. Suivi mensuel actif : débloque tous les calculs.
+  const actif = (acces ?? []).some((a) =>
+    a.plan === "audit"
+      ? a.status === "paid" && a.audit_id === id
+      : ["active", "trialing"].includes(a.status),
+  );
 
   return { reponses: depuisLigne(data), userId: user.id, email: user.email ?? null, debloque: actif };
 }

@@ -43,5 +43,12 @@ export async function GET() {
     }
   }
 
+  const sk = process.env.STRIPE_SECRET_KEY ?? "";
+  const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+  rapport.stripe_cle_secrete = sk ? (sk.startsWith("sk_test_") ? "ok (mode test)" : sk.startsWith("sk_live_") ? "ok (MODE RÉEL)" : sk.startsWith("rk_") ? "ok (clé restreinte)" : "format inattendu") : "MANQUANTE";
+  rapport.stripe_cle_publique = pk ? (pk.startsWith("pk_test_") ? "ok (mode test)" : pk.startsWith("pk_live_") ? "ok (MODE RÉEL)" : "format inattendu") : "MANQUANTE";
+  rapport.stripe_webhook = process.env.STRIPE_WEBHOOK_SECRET?.startsWith("whsec_") ? "ok" : "MANQUANT";
+  rapport.email_contact = process.env.NEXT_PUBLIC_CONTACT_EMAIL ? "ok" : "MANQUANT";
+
   return NextResponse.json(rapport, { headers: { "Cache-Control": "no-store", "Content-Type": "application/json; charset=utf-8" } });
 }

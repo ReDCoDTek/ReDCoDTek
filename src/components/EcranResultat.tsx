@@ -28,13 +28,16 @@ export function EcranResultat({
   apercu,
   hrefModifier = "/calcul",
   avertissement,
+  planDebloque,
   children,
 }: {
   calc: Resultat;
   apercu: Apercu;
   hrefModifier?: string;
   avertissement?: string;
-  /** Le paywall (étape 3) viendra s'insérer ici. */
+  /** Le plan complet, une fois payé : remplace la partie verrouillée. */
+  planDebloque?: React.ReactNode;
+  /** Le paywall, sous la partie verrouillée. */
   children?: React.ReactNode;
 }) {
   const r = calc.reponses;
@@ -123,6 +126,8 @@ export function EcranResultat({
         </p>
       </section>
 
+      {planDebloque ?? (
+        <>
       {/* Le plan : visible, mais verrouillé au-delà de l'avant-goût */}
       <section className="mt-10" id="plan">
         <h2 className="font-serif text-2xl">Ton plan pour augmenter ton tarif</h2>
@@ -157,10 +162,12 @@ export function EcranResultat({
         </div>
       </section>
 
-      {children ?? (
+          {children ?? (
         <p className="mt-6 rounded-md border border-dashed border-filet p-5 text-center text-encre-douce">
           Le déblocage de ton plan ouvre très bientôt.
         </p>
+      )}
+        </>
       )}
     </main>
   );
