@@ -19,7 +19,7 @@ export async function accorderAcces(session: Stripe.Checkout.Session) {
     (session.payment_status === "paid" || session.payment_status === "no_payment_required");
   if (!paye) return false;
 
-  const email = session.customer_details?.email ?? session.customer_email ?? null;
+  const email = session.customer_details?.email || session.customer_email || null;
   const db = supabaseAdmin();
   const { error } = await db.from("access").upsert(
     {

@@ -62,7 +62,7 @@ export async function creerSessionPaiement(
       mode: plan === "mensuel" ? "subscription" : "payment",
       locale: "fr",
       client_reference_id: audit.userId,
-      customer_email: audit.email ?? undefined,
+      customer_email: audit.email || undefined,
       metadata,
       line_items: [
         {

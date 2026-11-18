@@ -60,5 +60,5 @@ export async function lireAudit(id: string) {
       : ["active", "trialing"].includes(a.status),
   );
 
-  return { reponses: depuisLigne(data), userId: user.id, email: user.email ?? null, debloque: actif };
+  return { reponses: depuisLigne(data), userId: user.id, email: user.email || null, debloque: actif };
 }
